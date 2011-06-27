@@ -1,0 +1,109 @@
+<?php
+/**
+ * @file
+ *   A simple module that displays a drop-down list at the side of the site with taxonomy from a certain vocabulary. When the user selects a taxonomy term and clicks a button, they are taken to the default page for that term.
+ */
+
+/**
+ * Implements hook_block_info().
+ */
+function taxonomy_quickpick_block_info() {
+  $blocks = array();
+
+  $blocks['taxonomy_quickpick'] = array(
+    'info' => t('Taxonomy quickpick'),
+    'cache' => DRUPAL_CACHE_GLOBAL,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function taxonomy_quickpick_block_configure($delta = '') {
+  $config_form = array();
+
+  $vocabularies = taxonomy_get_vocabularies();
+  $vocabulary_options = array();
+  foreach ($vocabularies as $item) {
+    $vocabulary_options[$item->vid] = $item->name;
+  }
+
+  $config_form['taxonomy_quickpick_vocab'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Vocabulary'),
+    '#default_value' => variable_get('taxonomy_quickpick_vocab', NULL),
+    '#options'       => $vocabulary_options,
+    '#required'      => TRUE,
+  );
+
+  return $config_form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function taxonomy_quickpick_block_save($delta = '', $edit = array()) {
+  variable_set('taxonomy_quickpick_vocab', $edit['taxonomy_quickpick_vocab']);
+  return;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function taxonomy_quickpick_block_view($delta = '') {
+  $output = array();
+
+  $output['subject'] = t('Taxonomy Quickpick');
+  $output['content'] = drupal_get_form('taxonomy_quickpick_quickpick_form');
+
+  return $output;
+}
+
+/**
+ * Form constructor for the Taxonomy Quickpick form.
+ *
+ * @see taxonomy_quickpick_quickpick_form_submit()
+ */
+function taxonomy_quickpick_quickpick_form($form, &$form_state) {
+  $vid = variable_get('taxonomy_quickpick_vocab', NULL);
+  if (!is_null($vid)) {
+    $vocabulary = taxonomy_vocabulary_load($vid);
+    if ($vocabulary) {
+      $tree = taxonomy_get_tree($vocabulary->vid);
+      $term_options = array();
+      foreach ($tree as $item) {
+        $term_options[$item->tid] = str_repeat('-', $item->depth) . $item->name;
+      }
+
+      $form['taxonomy_quickpick_selector'] = array(
+        '#type'     => 'select',
+        '#title'    => t('Select a %vocabname', array('%vocabname' => $vocabulary->name)),
+        '#options'  => $term_options,
+        '#required' => TRUE,
+      );
+      $form['taxonomy_quickpick_submit'] = array(
+        '#type'     => 'submit',
+        '#value'    => t('View'),
+      );
+    }
+  }
+
+  return $form;
+}
+
+
+/**
+ * Form submit handler for taxonomy_quickpick_quickpick_form().
+ * @see taxonomy_quickpick_quickpick_form()
+ */
+function taxonomy_quickpick_quickpick_form_submit($form, &$form_state) {
+  if (array_key_exists('taxonomy_quickpick_selector', $form_state['values']) and is_numeric($form_state['values']['taxonomy_quickpick_selector'])) {
+    $term = taxonomy_term_load($form_state['values']['taxonomy_quickpick_selector']);
+    if ($term) {
+      drupal_goto('taxonomy/term/' . $term->tid);
+    }
+  }
+}
+

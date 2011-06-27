@@ -1,0 +1,6 @@
+name = Taxonomy Quickpick
+description = A simple module that displays a drop-down list at the side of the site with taxonomy from a certain vocabulary. When the user selects a taxonomy term and clicks a button, they are taken to the default page for that term.
+core = 7.x
+
+dependencies[] = taxonomy
+
